@@ -1,0 +1,39 @@
+﻿[dotenv@17.3.1] injecting env (2) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+Table booking_records columns: [
+  'id',                    'created_at',
+  'customer_firstname',    'customer_lastname',
+  'customer_email',        'customer_phone',
+  'customer_company_name', 'address_line',
+  'address_city',          'address_state',
+  'address_postal_code',   'address_country',
+  'order_number',          'invoice_number',
+  'services',              'tax_list',
+  'amount',                'tax',
+  'discounted_amount',     'job_address',
+  'staff_name',            'latitude',
+  'longitude',             'start_at',
+  'end_at',                'transaction_fee',
+  'booking_questions',     'short_url'
+]
+Table payment_records: No data or error
+Table service_categories columns: [
+  'id',
+  'created_at',
+  'company_id',
+  'code',
+  'name',
+  'description',
+  'is_active'
+]
+Table service_subcategories columns: [ 'id', 'created_at', 'category_id', 'code', 'name', 'is_active' ]
+Table parts columns: [
+  'id',              'created_at',
+  'company_id',      'sku',
+  'category_code',   'subcategory_code',
+  'name',            'brand',
+  'compatible_make', 'compatible_model',
+  'compatible_year', 'specs',
+  'quantity',        'cost_price',
+  'sale_price',      'currency',
+  'is_active'
+]

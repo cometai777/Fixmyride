@@ -1,0 +1,13 @@
+﻿[dotenv@17.3.1] injecting env (2) from .env -- tip: ≡ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+--- Fetching Schema from Database ---
+Table: booking_records | Columns: id, created_at, customer_firstname, customer_lastname, customer_email, customer_phone, customer_company_name, address_line, address_city, address_state, address_postal_code, address_country, order_number, invoice_number, services, tax_list, amount, tax, discounted_amount, job_address, staff_name, latitude, longitude, start_at, end_at, transaction_fee, booking_questions, short_url
+Table: payment_records | Empty (Data required for key detection via JS SDK)
+Table: invoice_recordings | Columns: id, created_at, customer_email, billing_address, invoice_date, due_date, invoice_number, list_items, total_tax, discount_value, booking_id, invoice_link
+Table: customer_messages | Error: Could not find the table 'public.customer_messages' in the schema cache
+Table: parts | Columns: id, created_at, company_id, sku, category_code, subcategory_code, name, brand, compatible_make, compatible_model, compatible_year, specs, quantity, cost_price, sale_price, currency, is_active
+Table: admin_users | Columns: id, created_at, company_id, full_name, email, role, is_active
+Table: service_categories | Columns: id, created_at, company_id, code, name, description, is_active
+Table: service_subcategories | Columns: id, created_at, category_id, code, name, is_active
+Table: service_rules | Columns: id, created_at, company_id, category_code, subcategory_code, title, description, priority, is_active, service_area_required, allowed_city, allowed, ask_followup_question, rejection_message, acceptance_message, require_vehicle_make, require_vehicle_model, require_vehicle_year, require_part_check, require_pricing_check, offer_fieldd_url, created_by, updated_by
+Table: rule_conditions | Columns: id, created_at, rule_id, field_name, operator, value
+Table: rule_actions | Columns: id, rule_id, action_type, action_payload
