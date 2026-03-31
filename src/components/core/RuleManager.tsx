@@ -10,42 +10,27 @@ const RuleManager = ({ subcategory, onBack, showToast }: any) => {
 
   useEffect(() => {
     async function fetchRule() {
-      // Try fetching by subcategory_code FIRST (as suggested by database hint)
-      let { data, error } = await (supabase as any).from('service_rules').select('*').eq('subcategory_code', subcategory.id).maybeSingle();
-
-      // If none found, try fetching by PK assuming id === subcategory.id (per user requirement)
-      if (!data && !error) {
-        const fall = await (supabase as any).from('service_rules').select('*').eq('id', subcategory.id).maybeSingle();
-        if (fall.data) { data = fall.data; error = fall.error; }
-      }
-
-      // FINAL FALLBACK: Check if table is just named 'rules'
-      if (!data && !error) {
-        const legacy = await (supabase as any).from('rules').select('*').eq('subcategory_code', subcategory.id).maybeSingle();
-        if (legacy.data) { data = legacy.data; error = legacy.error; }
-      }
+      // Best practice: service_rules.subcategory_code matches service_subcategories.code
+      const subCode = subcategory?.code || subcategory?.subcategory_code || subcategory?.id;
+      let { data, error } = await (supabase as any)
+        .from('service_rules')
+        .select('*')
+        .eq('subcategory_code', subCode)
+        .maybeSingle();
 
       if (error) {
         console.error("Fetch Rule Error:", error);
         showToast('Error fetching rule: ' + error.message, 'error');
       } else if (!data) {
-        // Create default rule if it doesn't exist
-        const { data: created, error: createError } = await (supabase as any).from('service_rules').insert([
-          { subcategory_code: subcategory.id, title: `Default Rule for ${subcategory.name}`, is_active: true, priority: 1, allowed_city: 'Dubai' }
-        ]).select().single();
-        if (createError) {
-          console.error("Create Rule Error:", createError);
-          showToast('Failed to create default rule', 'error');
-        } else {
-          setRule(created);
-        }
+        // Default rule is created by DB trigger on subcategory insert.
+        showToast('No rule found for this service. Create the subcategory again or run the DB trigger migration.', 'error');
       } else {
         setRule(data);
       }
       setLoading(false);
     }
     fetchRule();
-  }, [subcategory.id, showToast, subcategory.name]);
+  }, [subcategory?.code, subcategory?.id, showToast, subcategory?.name]);
 
   const handleUpdate = async (field: string, value: any) => {
     const updated = { ...rule, [field]: value };

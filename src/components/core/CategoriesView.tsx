@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, ChevronRight, X, Plus, Settings } from 'lucide-react';
+import { Loader2, ChevronRight, X, Plus, Settings, Edit2, Trash2 } from 'lucide-react';
 import { supabase, supabaseUrl } from '../../lib/supabase';
 import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
@@ -16,6 +16,17 @@ const CategoriesView = ({ showToast }: any) => {
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [subLoading, setSubLoading] = useState(false);
   const [isSubAdding, setIsSubAdding] = useState(false);
+  const [isCatAdding, setIsCatAdding] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
+
+  const closeCategoryModal = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+    setSubcategories([]);
+    setIsSubAdding(false);
+    setEditingSubcategory(null);
+  };
 
   useEffect(() => {
     async function fetchCategories() {
@@ -42,7 +53,7 @@ const CategoriesView = ({ showToast }: any) => {
     fetchCategories();
   }, [showToast]);
 
-  const fetchSubcategories = async (category_id: any) => {
+  const fetchSubcategories = async (categoryId: any) => {
     setSubLoading(true);
     if (supabaseUrl.includes('placeholder')) {
       setSubcategories([]);
@@ -52,7 +63,7 @@ const CategoriesView = ({ showToast }: any) => {
     try {
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
       const { data: subs, error }: any = await Promise.race([
-        (supabase as any).from('service_subcategories').select('*').eq('category_id', category_id),
+        (supabase as any).from('service_subcategories').select('*').eq('category_id', categoryId),
         timeoutPromise
       ]);
       if (error) throw error;
@@ -67,6 +78,9 @@ const CategoriesView = ({ showToast }: any) => {
 
   const handleRowClick = (cat: any) => {
     setSelectedCategory(cat);
+    setSelectedSubcategory(null);
+    setIsSubAdding(false);
+    setEditingSubcategory(null);
     fetchSubcategories(cat.id);
   };
 
@@ -74,8 +88,60 @@ const CategoriesView = ({ showToast }: any) => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <Header title="Service Categories" />
+      <Header title="Service Categories" onAdd={() => setIsCatAdding(true)} />
       <SearchBar onSearch={setSearch} />
+
+      {isCatAdding && (
+        <ModalForm
+          title="Category"
+          fields={[
+            { name: 'name', label: 'Name' },
+            { name: 'code', label: 'Code' },
+            { name: 'description', label: 'Description' },
+            { name: 'is_active', label: 'Active', type: 'checkbox' },
+          ]}
+          onSave={async (formData: any) => {
+            const { data: created, error } = await (supabase as any)
+              .from('service_categories')
+              .insert([formData])
+              .select()
+              .single();
+            if (error) return showToast('Error: ' + error.message, 'error');
+            setData((prev) => [created, ...prev]);
+            setIsCatAdding(false);
+            showToast('Category created!', 'success');
+          }}
+          onCancel={() => setIsCatAdding(false)}
+        />
+      )}
+
+      {editingCategory && (
+        <ModalForm
+          title="Edit Category"
+          initialData={editingCategory}
+          fields={[
+            { name: 'name', label: 'Name' },
+            { name: 'code', label: 'Code' },
+            { name: 'description', label: 'Description' },
+            { name: 'is_active', label: 'Active', type: 'checkbox' },
+          ]}
+          onSave={async (formData: any) => {
+            const { id, ...payload } = formData || {};
+            const { data: updated, error } = await (supabase as any)
+              .from('service_categories')
+              .update(payload)
+              .eq('id', id)
+              .select()
+              .single();
+            if (error) return showToast('Error: ' + error.message, 'error');
+            setData((prev) => prev.map((c) => (c.id === id ? updated : c)));
+            if (selectedCategory?.id === id) setSelectedCategory(updated);
+            setEditingCategory(null);
+            showToast('Category updated!', 'success');
+          }}
+          onCancel={() => setEditingCategory(null)}
+        />
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
@@ -90,6 +156,7 @@ const CategoriesView = ({ showToast }: any) => {
                   <th>Description</th>
                   <th>Status</th>
                   <th>Action</th>
+                  <th style={{ width: '120px' }}>Edit</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,11 +186,41 @@ const CategoriesView = ({ showToast }: any) => {
                         Manage <ChevronRight size={14} />
                       </div>
                     </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          className="btn-remove"
+                          style={{ color: 'var(--primary)', background: 'var(--primary-light)' }}
+                          onClick={() => setEditingCategory(cat)}
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          className="btn-remove"
+                          onClick={async () => {
+                            if (!confirm('Delete this category? This may also affect its subcategories.')) return;
+                            const { error } = await (supabase as any).from('service_categories').delete().eq('id', cat.id);
+                            if (error) return showToast('Error: ' + error.message, 'error');
+                            setData((prev) => prev.filter((c) => c.id !== cat.id));
+                            if (selectedCategory?.id === cat.id) {
+                              setSelectedCategory(null);
+                              setSelectedSubcategory(null);
+                              setSubcategories([]);
+                            }
+                            showToast('Category deleted!', 'success');
+                          }}
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                       No categories found
                     </td>
                   </tr>
@@ -137,11 +234,12 @@ const CategoriesView = ({ showToast }: any) => {
       <AnimatePresence>
         {selectedCategory && (
           <motion.div
+            key={String(selectedCategory?.id ?? 'category-modal')}
             className="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedCategory(null)}
+            onClick={closeCategoryModal}
           >
             <motion.div
               className="modal-content"
@@ -150,7 +248,7 @@ const CategoriesView = ({ showToast }: any) => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
             >
-              <button className="modal-close" onClick={() => setSelectedCategory(null)}><X /></button>
+              <button className="modal-close" onClick={closeCategoryModal}><X /></button>
 
               {selectedSubcategory ? (
                 <RuleManager
@@ -177,28 +275,51 @@ const CategoriesView = ({ showToast }: any) => {
                         { name: 'is_active', label: 'Active', type: 'checkbox' }
                       ]}
                       onSave={async (formData: any) => {
-                        const { data: sub, error: subError } = await (supabase as any).from('service_subcategories').insert([{
-                          ...formData,
-                          category_id: selectedCategory.id
-                        }]).select().single();
+                        const { data: sub, error: subError } = await (supabase as any)
+                          .from('service_subcategories')
+                          .insert([{
+                            ...formData,
+                            category_id: selectedCategory.id
+                          }])
+                          .select()
+                          .single();
 
                         if (subError) {
                           showToast('Error: ' + subError.message, 'error');
                         } else if (sub) {
-                          // Auto-create rule
-                          await (supabase as any).from('service_rules').insert([{
-                            subcategory_code: sub.id,
-                            title: `Rule for ${sub.name}`,
-                            is_active: true,
-                            priority: 1,
-                            allowed_city: 'Dubai'
-                          }]);
                           setSubcategories(prev => [...prev, sub]);
                           setIsSubAdding(false);
-                          showToast('Subcategory & Default Rule created!');
+                          showToast('Subcategory created! Default rule will be created automatically.', 'success');
                         }
                       }}
                       onCancel={() => setIsSubAdding(false)}
+                    />
+                  )}
+
+                  {editingSubcategory && (
+                    <ModalForm
+                      title="Edit Subcategory"
+                      initialData={editingSubcategory}
+                      fields={[
+                        { name: 'name', label: 'Service Name' },
+                        { name: 'code', label: 'Service Code' },
+                        { name: 'is_active', label: 'Active', type: 'checkbox' },
+                      ]}
+                      onSave={async (formData: any) => {
+                        const { id, ...payload } = formData || {};
+                        const { data: updated, error } = await (supabase as any)
+                          .from('service_subcategories')
+                          .update(payload)
+                          .eq('id', id)
+                          .select()
+                          .single();
+                        if (error) return showToast('Error: ' + error.message, 'error');
+                        setSubcategories((prev) => prev.map((s) => (s.id === id ? updated : s)));
+                        if (selectedSubcategory?.id === id) setSelectedSubcategory(updated);
+                        setEditingSubcategory(null);
+                        showToast('Subcategory updated!', 'success');
+                      }}
+                      onCancel={() => setEditingSubcategory(null)}
                     />
                   )}
 
@@ -214,6 +335,7 @@ const CategoriesView = ({ showToast }: any) => {
                               <th>Code</th>
                               <th>Status</th>
                               <th>Configuration</th>
+                              <th style={{ width: '120px' }}>Edit</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -246,9 +368,35 @@ const CategoriesView = ({ showToast }: any) => {
                                     <Settings size={14} /> Manage Rule
                                   </button>
                                 </td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button
+                                      className="btn-remove"
+                                      style={{ color: 'var(--primary)', background: 'var(--primary-light)' }}
+                                      onClick={() => setEditingSubcategory(sub)}
+                                      title="Edit"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      className="btn-remove"
+                                      onClick={async () => {
+                                        if (!confirm('Delete this subcategory? Its rule will also be removed.')) return;
+                                        const { error } = await (supabase as any).from('service_subcategories').delete().eq('id', sub.id);
+                                        if (error) return showToast('Error: ' + error.message, 'error');
+                                        setSubcategories((prev) => prev.filter((s) => s.id !== sub.id));
+                                        if (selectedSubcategory?.id === sub.id) setSelectedSubcategory(null);
+                                        showToast('Subcategory deleted!', 'success');
+                                      }}
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
-                            {subcategories.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No subcategories found</td></tr>}
+                            {subcategories.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No subcategories found</td></tr>}
                           </tbody>
                         </table>
                       </div>
