@@ -10,6 +10,7 @@
   --sidebar-bg: #ffffff;
   --glass-card: #ffffff;
   --glass-border: rgba(255, 255, 255, 0.8);
+  --input-border: #cbd5e1;
   --text-main: #1d1e20;
   --text-dim: #717171;
   --white: #ffffff;
@@ -39,6 +40,16 @@ body {
   margin: 0;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 ::-webkit-scrollbar {
@@ -424,7 +435,7 @@ table tr:hover td {
 .modal-content {
   background: white;
   padding: 40px;
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
   width: 90%;
   max-width: 900px;
   max-height: 90vh;
@@ -455,6 +466,87 @@ table tr:hover td {
 .modal-close:hover {
   color: var(--primary);
   transform: rotate(90deg);
+}
+
+/* Booking detail modal: real column names (not Field / Value), one data row */
+.detail-columns-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table.detail-columns-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 14px;
+}
+
+table.detail-columns-table th,
+table.detail-columns-table td {
+  border: 1px solid var(--input-border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+table.detail-columns-table thead th {
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+table.detail-columns-table tbody td {
+  background: #fff;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+table.detail-columns-table--numeric tbody td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Item tables (services / tax / questions) */
+.kv-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table.kv-table {
+  width: 100%;
+  min-width: 280px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 14px;
+}
+
+table.kv-table th,
+table.kv-table td {
+  border: 1px solid var(--input-border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+table.kv-table thead th {
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, var(--text-dim));
+}
+
+table.kv-table tbody td {
+  background: #fff;
 }
 
 .btn-remove:hover {

@@ -1,33 +1,34 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Edit2, Trash2, Loader2 } from 'lucide-react';
 import Header from './Header';
 import SearchBar from './SearchBar';
 import ModalForm from './ModalForm';
-import { supabase, supabaseUrl, mockData } from '../../lib/supabase';
+import { supabase, supabaseUrl } from '../../lib/supabase';
 import type { GenericTableViewProps } from '../../types/index';
 
-const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id', onToast, hideDelete }: GenericTableViewProps) => {
+const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id', onToast, hideDelete, stickyFirstColumn, renderRowDetail }: GenericTableViewProps) => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [editingRow, setEditingRow] = useState<any>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [detailRow, setDetailRow] = useState<any>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    setLoading(true);
+    setData([]);
+    setErrorMsg(null);
+
     async function fetchData() {
-      setErrorMsg(null);
       if (supabaseUrl.includes('placeholder')) {
-        const mockMap: any = {
-          'parts': mockData.parts,
-          'booking_records': mockData.bookings,
-          'payment_records': mockData.payments,
-          'service_categories': mockData.categories,
-          'service_subcategories': (mockData.subcategories as any)[1] || []
-        };
-        setData(mockMap[tableName] || []);
-        setLoading(false);
+        if (!cancelled) {
+          setData([]);
+          setLoading(false);
+        }
         return;
       }
       try {
@@ -37,28 +38,28 @@ const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id'
           timeoutPromise
         ]);
 
+        if (cancelled) return;
         if (error) throw error;
         setData(rows || []);
       } catch (err: any) {
-        console.warn(`Falling back to mock data for ${tableName} due to error/timeout:`, err?.message);
-        const mockMap: any = {
-          'parts': mockData.parts,
-          'booking_records': mockData.bookings,
-          'payment_records': mockData.payments,
-          'service_categories': mockData.categories,
-          'service_subcategories': (mockData.subcategories as any)[1] || []
-        };
-        setData(mockMap[tableName] || []);
-        
+        if (cancelled) return;
+        console.warn(`Using empty state for ${tableName} due to error/timeout:`, err?.message);
+        setData([]);
+
         if (err?.message?.includes('JWT') || err?.message?.includes('key')) {
           onToast('Authentication Session Disconnected. Entering Demo Mode.', 'error');
           supabase.auth.signOut();
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [tableName, onToast, primaryKey]);
 
   const handleSave = async (formData: any) => {
@@ -136,8 +137,8 @@ const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id'
         <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="table-wrapper">
-            <table>
+          <div className={stickyFirstColumn ? 'table-wrapper table-wrapper--sticky-first' : 'table-wrapper'}>
+            <table className={stickyFirstColumn ? 'table--sticky-first' : undefined}>
               <thead>
                 <tr>
                   {columns.map((c: any) => <th key={c.key}>{c.label}</th>)}
@@ -146,12 +147,18 @@ const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id'
               </thead>
               <tbody>
                 {filtered.map((row: any, idx) => (
-                  <tr key={row[primaryKey] || `row-${idx}`}>
+                  <tr
+                    key={row[primaryKey] || `row-${idx}`}
+                    onClick={renderRowDetail ? () => setDetailRow(row) : undefined}
+                    style={renderRowDetail ? { cursor: 'pointer' } : undefined}
+                  >
                     {columns.map((c: any) => (
-                      <td key={c.key}>{c.formatter ? c.formatter(row[c.key], row, (newData: any) => handleSave({ ...row, ...newData })) : row[c.key]}</td>
+                      <td key={c.key}>
+                        {c.formatter ? c.formatter(row[c.key], row, (newData: any) => handleSave({ ...row, ...newData })) : row[c.key]}
+                      </td>
                     ))}
                     {(fields || !hideDelete) && (
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           {fields && (
                             <button className="btn-remove" style={{ color: 'var(--primary)', background: 'var(--primary-light)' }} onClick={() => setEditingRow(row)}>
@@ -168,11 +175,42 @@ const GenericTableView = ({ title, tableName, columns, fields, primaryKey = 'id'
                     )}
                   </tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={columns.length + ((fields || !hideDelete) ? 1 : 0)} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No records found
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      <AnimatePresence mode="wait">
+        {detailRow && renderRowDetail && (
+          <motion.div
+            key={String(detailRow[primaryKey] ?? 'detail')}
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setDetailRow(null)}
+          >
+            <motion.div
+              className="modal-content"
+              style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}
+              initial={{ scale: 0.96, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 12 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {renderRowDetail(detailRow, () => setDetailRow(null))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

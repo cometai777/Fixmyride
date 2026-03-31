@@ -5,33 +5,83 @@ import { Loader2, Menu, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import type { FixMyRideUser } from './types/index';
 import { useToast } from './hooks/useToast';
+import { validateAdminAccessByAuthUserId } from './lib/validateAdminAccess';
 
 // Components
 import Sidebar from './components/common/Sidebar';
 import Auth from './components/common/Auth';
+import VerifyEmailView from './components/common/VerifyEmailView';
+import PendingApprovalView from './components/common/PendingApprovalView';
 import GenericTableView from './components/common/GenericTableView';
 import DashboardView from './components/core/DashboardView';
 import CategoriesView from './components/core/CategoriesView';
 import InventoryView from './components/core/InventoryView';
+import { BOOKING_SUMMARY_COLUMNS } from './constants/bookingColumns';
+import BookingDetailContent from './components/common/BookingDetailContent';
+import { PAYMENT_SUMMARY_COLUMNS } from './constants/paymentColumns';
+import { INVOICE_SUMMARY_COLUMNS } from './constants/invoiceColumns';
+import PaymentDetailContent from './components/common/PaymentDetailContent';
+import InvoiceDetailContent from './components/common/InvoiceDetailContent';
 
 export default function App() {
   const [user, setUser] = useState<FixMyRideUser | null>(null);
+  const [adminProfile, setAdminProfile] = useState<any | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { toasts, showToast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const nextUser = (session?.user || null) as FixMyRideUser | null;
+      if (!nextUser) {
+        setUser(null);
+        setAdminProfile(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const admin = await validateAdminAccessByAuthUserId(nextUser.id);
+      if (!admin.ok) {
+        console.warn('Admin access denied:', admin.reason);
+        showToast(admin.reason, 'error');
+        await supabase.auth.signOut();
+        setUser(null);
+        setAdminProfile(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      setUser(nextUser);
+      setAdminProfile(admin.admin);
       setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+      (async () => {
+        const nextUser = (session?.user || null) as FixMyRideUser | null;
+        if (!nextUser) {
+          setUser(null);
+          setAdminProfile(null);
+          return;
+        }
+
+        const admin = await validateAdminAccessByAuthUserId(nextUser.id);
+        if (!admin.ok) {
+          console.warn('Admin access denied:', admin.reason);
+          showToast(admin.reason, 'error');
+          await supabase.auth.signOut();
+          setUser(null);
+          setAdminProfile(null);
+          return;
+        }
+
+        setUser(nextUser);
+        setAdminProfile(admin.admin);
+      })();
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [showToast]);
 
   return (
     <Router>
@@ -41,7 +91,11 @@ export default function App() {
             <Loader2 className="animate-spin" size={60} color="var(--primary)" />
           </div>
         ) : !user ? (
-          <Auth onAuthSuccess={setUser} />
+          <Auth onAuthSuccess={() => {}} />
+        ) : user.email && !user.email_confirmed_at ? (
+          <VerifyEmailView user={user} />
+        ) : adminProfile?.role === 'user' ? (
+          <PendingApprovalView email={user.email} />
         ) : (
           <>
             <header className="mobile-header">
@@ -53,59 +107,48 @@ export default function App() {
               </button>
             </header>
 
-            <Sidebar isOpen={isSidebarOpen} onToggle={setIsSidebarOpen} user={user} />
+            <Sidebar isOpen={isSidebarOpen} onToggle={setIsSidebarOpen} user={user} adminRole={adminProfile?.role} />
             
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<DashboardView user={user} />} />
                 <Route path="/categories" element={<CategoriesView showToast={showToast} />} />
                 <Route path="/bookings" element={<GenericTableView
+                  key="booking_records"
                   title="Booking Records"
                   tableName="booking_records"
                   onToast={showToast}
                   hideDelete={true}
-                  columns={[
-                    { key: 'order_number', label: 'Order #' },
-                    { key: 'invoice_number', label: 'Invoice', formatter: (val: any) => val || 'N/A' },
-                    { key: 'created_at', label: 'Date', formatter: (val: any) => new Date(val).toLocaleDateString() },
-                    { key: 'customer_firstname', label: 'Customer', formatter: (val: any, row: any) => `${val || ''} ${row.customer_lastname || ''}` },
-                    { key: 'customer_phone', label: 'Phone' },
-                    { key: 'customer_email', label: 'Email' },
-                    { key: 'address_city', label: 'City' },
-                    { key: 'amount', label: 'Total', formatter: (val: any) => `AED ${val || 0}` },
-                    { key: 'staff_name', label: 'Staff' },
-                  ]}
+                  columns={BOOKING_SUMMARY_COLUMNS}
+                  renderRowDetail={(row, onClose) => (
+                    <BookingDetailContent row={row as Record<string, unknown>} onClose={onClose} />
+                  )}
                 />} />
                 <Route path="/payments" element={<GenericTableView
+                  key="payment_records"
                   title="Payment Records"
                   tableName="payment_records"
                   onToast={showToast}
                   hideDelete={true}
-                  columns={[
-                    { key: 'created_at', label: 'Date', formatter: (val: any) => new Date(val).toLocaleDateString() },
-                    { key: 'customer_firstname', label: 'Customer', formatter: (val: any, row: any) => `${val || ''} ${row.customer_lastname || ''}` },
-                    { key: 'amount', label: 'Amount', formatter: (val: any) => `AED ${val}` },
-                    { key: 'payment_method', label: 'Method' },
-                    { key: 'status', label: 'Status', formatter: (val: any) => <span className="badge badge-success">{val}</span> },
-                  ]}
+                  columns={PAYMENT_SUMMARY_COLUMNS}
+                  renderRowDetail={(row, onClose) => (
+                    <PaymentDetailContent row={row as Record<string, unknown>} onClose={onClose} />
+                  )}
                 />} />
                 <Route path="/invoices" element={<GenericTableView
+                  key="invoice_recordings"
                   title="Invoice Records"
                   tableName="invoice_recordings"
                   onToast={showToast}
                   primaryKey="invoice_number"
                   hideDelete={true}
-                  columns={[
-                    { key: 'invoice_number', label: 'Invoice No.' },
-                    { key: 'invoice_date', label: 'Date', formatter: (val: any) => val ? new Date(val).toLocaleDateString() : 'N/A' },
-                    { key: 'customer_email', label: 'Customer Email' },
-                    { key: 'total_tax', label: 'Tax', formatter: (val: any) => `AED ${val || 0}` },
-                    { key: 'discount_value', label: 'Discount', formatter: (val: any) => `AED ${val || 0}` },
-                    { key: 'due_date', label: 'Due Date', formatter: (val: any) => val ? new Date(val).toLocaleDateString() : 'N/A' },
-                    { key: 'invoice_link', label: 'Document', formatter: (val: any) => val ? <a href={val} target="_blank" style={{color: 'var(--primary)'}}>View PDF</a> : 'N/A' },
-                  ]}
+                  columns={INVOICE_SUMMARY_COLUMNS}
+                  renderRowDetail={(row, onClose) => (
+                    <InvoiceDetailContent row={row as Record<string, unknown>} onClose={onClose} />
+                  )}
                 />} />
                 <Route path="/messages" element={<GenericTableView
+                  key="customer_messages"
                   title="Customer Messages"
                   tableName="customer_messages"
                   onToast={showToast}
@@ -118,9 +161,12 @@ export default function App() {
                 />} />
                 <Route path="/parts" element={<InventoryView showToast={showToast} />} />
                 <Route path="/admin-users" element={<GenericTableView
+                  key="admin_users"
                   title="Admin Users"
                   tableName="admin_users"
                   onToast={showToast}
+                  // Only super admin can access this page
+                  renderRowDetail={adminProfile?.role === 'super admin' ? undefined : () => null}
                   columns={[
                     { key: 'full_name', label: 'Full Name' },
                     { key: 'email', label: 'Email' },
@@ -130,7 +176,7 @@ export default function App() {
                   fields={[
                     { name: 'full_name', label: 'Full Name' },
                     { name: 'email', label: 'Email' },
-                    { name: 'role', label: 'Role', type: 'select', options: ['Super Admin', 'Admin', 'Editor'] },
+                    { name: 'role', label: 'Role', type: 'select', options: ['super admin', 'admin', 'user'] },
                     { name: 'is_active', label: 'Active Account', type: 'checkbox' },
                   ]}
                 />} />

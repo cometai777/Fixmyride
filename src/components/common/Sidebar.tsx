@@ -7,7 +7,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import type { FixMyRideUser, NavItem } from '../../types/index';
 
-const Sidebar = ({ isOpen, onToggle, user }: { isOpen: boolean, onToggle: (open: boolean) => void, user: FixMyRideUser | null }) => {
+const Sidebar = ({ isOpen, onToggle, user, adminRole }: { isOpen: boolean, onToggle: (open: boolean) => void, user: FixMyRideUser | null, adminRole?: string }) => {
   const location = useLocation();
 
   const navItems: NavItem[] = [
@@ -17,7 +17,7 @@ const Sidebar = ({ isOpen, onToggle, user }: { isOpen: boolean, onToggle: (open:
     { name: 'Payments', icon: <CreditCard size={20} />, path: '/payments' },
     { name: 'Invoices', icon: <FileText size={20} />, path: '/invoices' },
     { name: 'Inventory', icon: <Package size={20} />, path: '/parts' },
-    { name: 'Admins', icon: <Users size={20} />, path: '/admin-users' },
+    ...(adminRole === 'super admin' ? [{ name: 'Admins', icon: <Users size={20} />, path: '/admin-users' }] : []),
   ];
 
   return (
@@ -73,7 +73,7 @@ const Sidebar = ({ isOpen, onToggle, user }: { isOpen: boolean, onToggle: (open:
                 {user?.email}
               </div>
               <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '2px' }}>
-                Super Admin
+                {adminRole ? String(adminRole) : '—'}
               </div>
             </div>
           </div>

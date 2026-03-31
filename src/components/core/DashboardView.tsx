@@ -5,7 +5,7 @@ import {
   Loader2, CalendarCheck, ChevronRight 
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase, supabaseUrl, mockData } from '../../lib/supabase';
+import { supabase, supabaseUrl } from '../../lib/supabase';
 import Header from '../common/Header';
 import type { FixMyRideUser, DashboardStats } from '../../types/index';
 
@@ -20,13 +20,8 @@ const DashboardView = ({ user }: { user: FixMyRideUser | null }) => {
   useEffect(() => {
     async function fetchStats() {
       if (!isSupabaseLive) {
-        setStats({
-          bookings: mockData.bookings.length,
-          services: mockData.categories.length,
-          revenue: 45200,
-          parts: mockData.parts?.length || 0
-        });
-        setRecent(mockData.bookings.slice(0, 3));
+        setStats({ bookings: 0, services: 0, revenue: 0, parts: 0 });
+        setRecent([]);
         setLoading(false);
         return;
       }
@@ -51,14 +46,9 @@ const DashboardView = ({ user }: { user: FixMyRideUser | null }) => {
         });
         setRecent(latest.data || []);
       } catch (err) {
-        console.warn("Using fallback mock data due to connection error:", err);
-        setStats({
-          bookings: mockData.bookings.length,
-          services: mockData.categories.length,
-          revenue: 45200,
-          parts: mockData.parts?.length || 0
-        });
-        setRecent(mockData.bookings.slice(0, 3));
+        console.warn("Using empty dashboard state due to connection error:", err);
+        setStats({ bookings: 0, services: 0, revenue: 0, parts: 0 });
+        setRecent([]);
       } finally {
         setLoading(false);
       }
@@ -77,7 +67,7 @@ const DashboardView = ({ user }: { user: FixMyRideUser | null }) => {
       {!isSupabaseLive && (
         <div className="config-banner">
           <AlertCircle size={20} />
-          <span><strong>Action Required:</strong> Please configure your <code>.env</code> file with real Supabase credentials to view live data. Using mock data for preview.</span>
+          <span><strong>Action Required:</strong> Please configure your <code>.env</code> file with real Supabase credentials to view live data.</span>
         </div>
       )}
       <Header title={`Welcome, ${adminName}`} />

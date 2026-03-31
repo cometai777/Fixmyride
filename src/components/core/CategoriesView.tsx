@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, ChevronRight, X, Plus, Settings } from 'lucide-react';
-import { supabase, supabaseUrl, mockData } from '../../lib/supabase';
+import { supabase, supabaseUrl } from '../../lib/supabase';
 import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
 import ModalForm from '../common/ModalForm';
@@ -20,7 +20,7 @@ const CategoriesView = ({ showToast }: any) => {
   useEffect(() => {
     async function fetchCategories() {
       if (supabaseUrl.includes('placeholder')) {
-        setData(mockData.categories || []);
+        setData([]);
         setLoading(false);
         return;
       }
@@ -33,8 +33,8 @@ const CategoriesView = ({ showToast }: any) => {
         if (error) throw error;
         setData(categories || []);
       } catch (err: any) {
-        console.warn("Using fallback categories due to error/timeout:", err?.message);
-        setData(mockData.categories || []);
+        console.warn("Using empty categories due to error/timeout:", err?.message);
+        setData([]);
       } finally {
         setLoading(false);
       }
@@ -45,8 +45,7 @@ const CategoriesView = ({ showToast }: any) => {
   const fetchSubcategories = async (category_id: any) => {
     setSubLoading(true);
     if (supabaseUrl.includes('placeholder')) {
-      const subs = (mockData.subcategories as any)[category_id] || [];
-      setSubcategories(subs);
+      setSubcategories([]);
       setSubLoading(false);
       return;
     }
@@ -59,8 +58,8 @@ const CategoriesView = ({ showToast }: any) => {
       if (error) throw error;
       setSubcategories(subs || []);
     } catch (err: any) {
-      console.warn("Using fallback subcategories due to error/timeout:", err?.message);
-      setSubcategories((mockData.subcategories as any)[category_id] || []);
+      console.warn("Using empty subcategories due to error/timeout:", err?.message);
+      setSubcategories([]);
     } finally {
       setSubLoading(false);
     }
@@ -122,6 +121,13 @@ const CategoriesView = ({ showToast }: any) => {
                     </td>
                   </tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No categories found
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
