@@ -9,7 +9,7 @@
   --bg-main: #ebedf0;
   --sidebar-bg: #ffffff;
   --glass-card: #ffffff;
-  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-border: rgb(209, 209, 209);
   --input-border: #cbd5e1;
   --text-main: #1d1e20;
   --text-dim: #717171;
@@ -303,13 +303,55 @@ select {
 }
 
 .search-bar input {
-  border: none;
+  border: none!important;
   background: none;
   outline: none;
   font-size: 15px;
   width: 100%;
   font-weight: 500;
   font-family: var(--font-body);
+}
+
+/* --- Form inputs (bordered) --- */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  outline: none;
+}
+
+/* Make selects look consistent + modern */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 44px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%2364748b' d='M5.5 7.5 10 12l4.5-4.5 1.4 1.4L10 14.8 4.1 8.9z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px 18px;
+}
+
+select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0, 163, 255, 0.1);
+}
+
+/* Utility class for modal/forms */
+.form-input {
+  width: 100%;
+  margin-bottom: 0;
 }
 
 /* --- Table Styles --- */
@@ -320,11 +362,68 @@ select {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Column helpers */
+.col-nowrap {
+  white-space: nowrap;
+}
+
+.cell-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  display: block;
+}
+
+/* Floating tooltip (black, larger text) */
+.floating-tooltip {
+  position: fixed;
+  max-width: min(560px, calc(100vw - 24px));
+  background: rgba(0, 0, 0, 0.92);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 650;
+  white-space: pre-wrap;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 5000;
+}
+
 table {
   width: 100%;
   min-width: 800px;
   border-collapse: separate;
   border-spacing: 0;
+}
+
+/* Rule modal actions table should not force horizontal scroll */
+table.rules-actions-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+/* Rule modal drag UX */
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle.dragging {
+  cursor: grabbing;
+}
+
+tr.drag-over-row.drag-over-before td {
+  box-shadow: inset 0 3px 0 0 var(--primary);
+}
+
+tr.drag-over-row.drag-over-after td {
+  box-shadow: inset 0 -3px 0 0 var(--primary);
 }
 
 table th {
@@ -344,15 +443,70 @@ table td {
   padding: 20px 24px;
   font-size: 15px;
   font-weight: 500;
-  border-bottom: 1px solid #f9fafb;
-}
-
-table tr:last-child td {
   border-bottom: none;
 }
 
-table tr:hover td {
-  background: #fafafa;
+/* Row separators: bottom border for each row except last */
+table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Zebra striping */
+table tbody tr:nth-child(odd) td {
+  background: #f0f3f8;
+}
+table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+table tbody tr:hover > td {
+  background: #e8f3ff;
+  color: var(--text-main);
+}
+
+table tbody td {
+  transition: background-color 0.15s ease;
+}
+
+/* Toggle switch (checkbox) */
+.toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  outline: none;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.toggle:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.toggle:checked::after {
+  transform: translateX(20px);
+}
+
+.toggle:focus-visible {
+  box-shadow: 0 0 0 4px rgba(0, 163, 255, 0.18);
 }
 
 .badge {
@@ -443,12 +597,13 @@ table tr:hover td {
   position: relative;
   box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.5);
+  overscroll-behavior: contain;
 }
 
 .modal-close {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: 14px;
+  right: 14px;
   background: var(--primary-light);
   width: 36px;
   height: 36px;

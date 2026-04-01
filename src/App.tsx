@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Menu, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from './lib/supabase';
@@ -83,6 +83,32 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, [showToast]);
 
+  // Keep the current user's admin role in sync (e.g. if super admin demotes themselves).
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = (supabase as any)
+      .channel('admin_users_self')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'admin_users',
+          filter: `auth_user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          const next = payload?.new;
+          if (!next) return;
+          setAdminProfile((prev: any) => ({ ...(prev || {}), ...next }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      (supabase as any).removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return (
     <Router>
       <div className="app-container">
@@ -160,26 +186,38 @@ export default function App() {
                   ]}
                 />} />
                 <Route path="/parts" element={<InventoryView showToast={showToast} />} />
-                <Route path="/admin-users" element={<GenericTableView
-                  key="admin_users"
-                  title="Admin Users"
-                  tableName="admin_users"
-                  onToast={showToast}
-                  // Only super admin can access this page
-                  renderRowDetail={adminProfile?.role === 'super admin' ? undefined : () => null}
-                  columns={[
-                    { key: 'full_name', label: 'Full Name' },
-                    { key: 'email', label: 'Email' },
-                    { key: 'role', label: 'Role' },
-                    { key: 'is_active', label: 'Status', formatter: (val: any) => <span className={`badge ${val ? 'badge-success' : 'badge-danger'}`}>{val ? 'Active' : 'Inactive'}</span> },
-                  ]}
-                  fields={[
-                    { name: 'full_name', label: 'Full Name' },
-                    { name: 'email', label: 'Email' },
-                    { name: 'role', label: 'Role', type: 'select', options: ['super admin', 'admin', 'user'] },
-                    { name: 'is_active', label: 'Active Account', type: 'checkbox' },
-                  ]}
-                />} />
+                <Route
+                  path="/admin-users"
+                  element={
+                    String(adminProfile?.role || '').trim().toLowerCase() === 'super admin'
+                      ? (
+                        <GenericTableView
+                          key="admin_users"
+                          title="Admin Users"
+                          tableName="admin_users"
+                          onToast={showToast}
+                          columns={[
+                            { key: 'full_name', label: 'Full Name' },
+                            { key: 'email', label: 'Email' },
+                            { key: 'role', label: 'Role' },
+                            { key: 'is_active', label: 'Status', formatter: (val: any) => <span className={`badge ${val ? 'badge-success' : 'badge-danger'}`}>{val ? 'Active' : 'Inactive'}</span> },
+                          ]}
+                          fields={[
+                            { name: 'full_name', label: 'Full Name' },
+                            { name: 'email', label: 'Email' },
+                            {
+                              name: 'role',
+                              label: 'Role',
+                              type: 'select',
+                              options: ['super admin', 'admin', 'user'],
+                            },
+                            { name: 'is_active', label: 'Active Account', type: 'checkbox' },
+                          ]}
+                        />
+                      )
+                      : <Navigate to="/" replace />
+                  }
+                />
                 <Route path="*" element={<DashboardView user={user} />} />
               </Routes>
             </main>

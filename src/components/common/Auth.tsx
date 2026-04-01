@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 
 const Auth = ({ onAuthSuccess }: any) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,9 @@ const Auth = ({ onAuthSuccess }: any) => {
           password,
           options: {
             emailRedirectTo,
+            data: {
+              full_name: fullName.trim() || null,
+            },
           },
         });
 
@@ -84,6 +88,18 @@ const Auth = ({ onAuthSuccess }: any) => {
           </div>
         ) : (
         <form onSubmit={handleAuth} className="auth-form">
+          {!isLogin && (
+            <div className="auth-field">
+              <label>Full Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Atif Farooq"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+          )}
           <div className="auth-field">
             <label>Email Address</label>
             <input

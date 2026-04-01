@@ -4,13 +4,20 @@
 -- Assumptions based on schema:
 -- - public.service_categories has columns: id, code, ...
 -- - public.service_subcategories has: id, category_id, code, name, ...
--- - public.service_rules has: category_code, subcategory_code, title, priority, is_active, allowed_city, allowed, ...
+-- - public.service_rules has at least: category_code, subcategory_code, title, description, is_active, actions
 --
 -- Apply in Supabase SQL Editor.
 
--- Ensure there's only one rule per subcategory code (recommended).
-CREATE UNIQUE INDEX IF NOT EXISTS service_rules_subcategory_code_key
-  ON public.service_rules (subcategory_code);
+-- Ensure there's only one rule per (category_code, subcategory_code).
+-- service_subcategories is unique on (category_id, code), so subcategory codes may repeat across categories.
+DROP INDEX IF EXISTS public.service_rules_subcategory_code_key;
+CREATE UNIQUE INDEX IF NOT EXISTS service_rules_category_subcategory_key
+  ON public.service_rules (category_code, subcategory_code);
+
+-- Force-replace any older versions of the trigger/function.
+-- (CASCADE will drop triggers that reference the function.)
+DROP FUNCTION IF EXISTS public.handle_new_service_subcategory() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_delete_service_subcategory() CASCADE;
 
 CREATE OR REPLACE FUNCTION public.handle_new_service_subcategory()
 RETURNS trigger
@@ -31,36 +38,30 @@ BEGIN
     subcategory_code,
     title,
     description,
-    priority,
     is_active,
-    allowed_city,
-    allowed,
-    service_area_required,
-    ask_followup_question,
-    require_vehicle_make,
-    require_vehicle_model,
-    require_vehicle_year,
-    require_part_check,
-    require_pricing_check
+    actions
   )
   VALUES (
     v_category_code,
     NEW.code,
     CONCAT('Default Rule for ', COALESCE(NEW.name, NEW.code)),
     NULL,
-    1,
     true,
-    'Dubai',
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
+    jsonb_build_array(
+      'Require vehicle make, model, and year',
+      'Check the parts',
+      'Explain the price to customers',
+      'Offer booking link'
+    )
   )
-  ON CONFLICT (subcategory_code) DO NOTHING;
+  ON CONFLICT (category_code, subcategory_code)
+  DO UPDATE SET
+    category_code = EXCLUDED.category_code,
+    title = EXCLUDED.title,
+    is_active = EXCLUDED.is_active,
+    -- Keep existing description/actions if already customized
+    description = COALESCE(public.service_rules.description, EXCLUDED.description),
+    actions = COALESCE(public.service_rules.actions, EXCLUDED.actions);
 
   RETURN NEW;
 END;

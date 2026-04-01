@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Loader2, Settings, Package, GripVertical } from 'lucide-react';
 import ModalForm from '../common/ModalForm';
+import ConfirmDialog from '../common/ConfirmDialog';
 import { supabase } from '../../lib/supabase';
 
 const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any) => {
@@ -9,6 +10,7 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
   const [isAdding, setIsAdding] = useState(false);
   const [editingRow, setEditingRow] = useState<any>(null);
   const [dragId, setDragId] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -85,15 +87,13 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
     await persistActionPriorities(next);
   };
 
-  const handleDelete = async (id: any) => {
-    if (confirm('Are you sure you want to remove this record?')) {
-      const { error } = await (supabase as any).from(tableName).delete().eq('id', id);
-      if (!error) {
-        setData(data.filter(r => r.id !== id));
-        showToast('Record removed', 'success');
-      } else {
-        showToast('Error removing: ' + error.message, 'error');
-      }
+  const doDelete = async (id: any) => {
+    const { error } = await (supabase as any).from(tableName).delete().eq('id', id);
+    if (!error) {
+      setData(data.filter(r => r.id !== id));
+      showToast('Record removed', 'success');
+    } else {
+      showToast('Error removing: ' + error.message, 'error');
     }
   };
 
@@ -173,7 +173,7 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
                 ))}
                 <td style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn-remove" onClick={() => setEditingRow(row)} style={{ padding: '6px', color: 'var(--primary)', background: 'var(--primary-light)' }}><Edit2 size={14} /></button>
-                  <button className="btn-remove" onClick={() => handleDelete(row.id)} style={{ padding: '6px', color: '#ef4444' }}><Trash2 size={14} /></button>
+                  <button className="btn-remove" onClick={() => setDeleteTarget(row.id)} style={{ padding: '6px', color: '#ef4444' }}><Trash2 size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -187,6 +187,21 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null && typeof deleteTarget !== 'undefined'}
+        title="Delete record"
+        message="Are you sure you want to remove this record? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        danger
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          const id = deleteTarget;
+          setDeleteTarget(null);
+          await doDelete(id);
+        }}
+      />
     </div>
   );
 };

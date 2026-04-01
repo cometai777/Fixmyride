@@ -134,7 +134,7 @@ const ModalForm = ({ title, fields, initialData, onSave, onCancel }: any) => {
         <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '16px' }}>
           <label style={labelStyle}>Inventory Check Logic</label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input type="checkbox" checked={!!payload.auto_verify} onChange={e => handlePayloadPartChange(f.name, 'auto_verify', e.target.checked)} />
+            <input className="toggle" type="checkbox" checked={!!payload.auto_verify} onChange={e => handlePayloadPartChange(f.name, 'auto_verify', e.target.checked)} />
             <span style={{ fontSize: '13px', fontWeight: '500' }}>Automatically check and reserve stock for this service</span>
           </div>
         </div>
@@ -160,39 +160,59 @@ const ModalForm = ({ title, fields, initialData, onSave, onCancel }: any) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay">
       <motion.div
         className="modal-content"
-        style={{ maxWidth: '500px' }}
+        style={{ maxWidth: '500px', padding: 0 }}
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={e => e.stopPropagation()}
       >
-        <button className="modal-close" onClick={onCancel}><X /></button>
-        <h2 style={{ marginBottom: '20px' }}>{initialData ? 'Edit' : 'Add'} {title}</h2>
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            background: 'white',
+            padding: '24px 40px 16px',
+            borderBottom: '1px solid #f1f5f9',
+          }}
+        >
+          <h2 style={{ margin: 0 }}>{initialData ? 'Edit' : 'Add'} {title}</h2>
+          <button
+            className="modal-close"
+            onClick={onCancel}
+            type="button"
+            style={{ top: 18, right: 18 }}
+          >
+            <X />
+          </button>
+        </div>
+        <form
+          onSubmit={(e) => { e.preventDefault(); onSave(formData); }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px 40px 40px' }}
+        >
           {fields.map((f: any) => (
             <div key={f.name} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>{f.label}</label>
               {f.type === 'checkbox' ? (
-                <input type="checkbox" name={f.name} checked={!!formData[f.name]} onChange={handleChange} />
+                <input className="toggle" type="checkbox" name={f.name} checked={!!formData[f.name]} onChange={handleChange} disabled={!!f.disabled} />
               ) : f.type === 'select' ? (
-                <div style={{ position: 'relative' }}>
-                  <input
-                    list={`${f.name}-options`}
-                    name={f.name}
-                    value={formData[f.name] || ''}
-                    onChange={handleChange}
-                    className="search-bar"
-                    placeholder="Type or select an option..."
-                    style={{ width: '100%', marginBottom: 0, borderRadius: '8px' }}
-                  />
-                  <datalist id={`${f.name}-options`}>
-                    {(typeof f.options === 'function' ? f.options(formData) : f.options).map((opt: any) => (
-                      <option key={opt} value={opt}>{opt.replace(/_/g, ' ').toUpperCase()}</option>
-                    ))}
-                  </datalist>
-                </div>
+                <select
+                  name={f.name}
+                  value={formData[f.name] || ''}
+                  onChange={handleChange}
+                  className="form-input"
+                  style={{ width: '100%', marginBottom: 0 }}
+                  disabled={!!f.disabled}
+                >
+                  <option value="" disabled>Select an option...</option>
+                  {(typeof f.options === 'function' ? f.options(formData) : f.options).map((opt: any) => (
+                    <option key={opt} value={opt}>
+                      {String(opt).replace(/_/g, ' ').toUpperCase()}
+                    </option>
+                  ))}
+                </select>
               ) : f.type === 'dynamic_payload' ? (
                 renderDynamicPayload(f)
               ) : f.type === 'textarea' ? (
@@ -201,8 +221,9 @@ const ModalForm = ({ title, fields, initialData, onSave, onCancel }: any) => {
                   value={formData[f.name] || ''}
                   onChange={handleChange}
                   placeholder={f.label}
-                  className="search-bar"
-                  style={{ width: '100%', marginBottom: 0, borderRadius: '8px', minHeight: '120px', padding: '12px', resize: 'vertical', fontFamily: 'monospace', fontSize: '13px' }}
+                  className="form-input"
+                  style={{ width: '100%', marginBottom: 0, minHeight: '120px', padding: '12px', resize: 'vertical', fontFamily: 'monospace', fontSize: '13px' }}
+                  disabled={!!f.disabled}
                 />
               ) : (
                 <input
@@ -211,14 +232,15 @@ const ModalForm = ({ title, fields, initialData, onSave, onCancel }: any) => {
                   value={formData[f.name] || ''}
                   onChange={handleChange}
                   placeholder={f.label}
-                  className="search-bar"
-                  style={{ width: '100%', marginBottom: 0, borderRadius: '8px' }}
+                  className="form-input"
+                  style={{ width: '100%', marginBottom: 0 }}
+                  disabled={!!f.disabled}
                 />
               )}
             </div>
           ))}
           <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-            <button type="button" onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontWeight: '600' }}>Cancel</button>
+            <button type="button" onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontWeight: '600' }}>Close</button>
             <button type="submit" style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: '700' }}>Save Changes</button>
           </div>
         </form>

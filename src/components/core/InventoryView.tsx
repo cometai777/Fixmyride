@@ -24,22 +24,42 @@ const InventoryView = ({ showToast }: any) => {
       title="Inventory / Parts"
       tableName="parts"
       onToast={showToast}
+      tableLayout="auto"
+      tableMinWidth={1400}
       columns={[
-        { key: 'sku', label: 'SKU' },
-        { key: 'name', label: 'Part Name' },
-        { key: 'brand', label: 'Brand' },
+        {
+          key: 'sku',
+          label: 'SKU',
+          minWidth: 160,
+          className: 'col-nowrap',
+          formatter: (val: any) => <div className="cell-ellipsis" style={{ maxWidth: 180 }}>{val ? String(val) : '—'}</div>
+        },
+        {
+          key: 'name',
+          label: 'Part Name',
+          minWidth: 260,
+          formatter: (val: any) => <div className="cell-ellipsis" style={{ maxWidth: 280 }}>{val ? String(val) : '—'}</div>
+        },
+        { key: 'brand', label: 'Brand', minWidth: 140, className: 'col-nowrap' },
         { key: 'compatible_make', label: 'Make', formatter: (val: any) => val || '—' },
         { key: 'compatible_model', label: 'Model', formatter: (val: any) => val || '—' },
-        { key: 'compatible_year', label: 'Year', formatter: (val: any) => val || '—' },
-        { key: 'specs', label: 'Specs', formatter: (val: any) => (val ? String(val) : '—') },
-        { key: 'category_code', label: 'Category', formatter: (val: any) => val?.toUpperCase() || 'N/A' },
-        { key: 'subcategory_code', label: 'Subcategory', formatter: (val: any) => val?.toUpperCase() || 'N/A' },
-        { key: 'sale_price', label: 'Sale Price', formatter: (val: any) => `AED ${val || 0}` },
-        { key: 'cost_price', label: 'Cost Price', formatter: (val: any) => `AED ${val || 0}` },
+        { key: 'compatible_year', label: 'Year', minWidth: 110, className: 'col-nowrap', formatter: (val: any) => val || '—' },
+        {
+          key: 'specs',
+          label: 'Specs',
+          minWidth: 320,
+          formatter: (val: any) => <div className="cell-ellipsis" style={{ maxWidth: 340 }}>{val ? String(val) : '—'}</div>
+        },
+        { key: 'category_code', label: 'Category', minWidth: 140, className: 'col-nowrap', formatter: (val: any) => val?.toUpperCase() || 'N/A' },
+        { key: 'subcategory_code', label: 'Subcategory', minWidth: 170, className: 'col-nowrap', formatter: (val: any) => val?.toUpperCase() || 'N/A' },
+        { key: 'sale_price', label: 'Sale Price', minWidth: 130, className: 'col-nowrap', formatter: (val: any) => `AED ${val || 0}` },
+        { key: 'cost_price', label: 'Cost Price', minWidth: 130, className: 'col-nowrap', formatter: (val: any) => `AED ${val || 0}` },
         { key: 'quantity', label: 'Stock', formatter: (val: any) => <span style={{ fontWeight: 800, color: (val || 0) < 5 ? '#ef4444' : 'inherit' }}>{val || 0}</span> },
         {
           key: 'is_active',
           label: 'Status',
+          minWidth: 120,
+          className: 'col-nowrap',
           formatter: (val: any, _: any, update: any) => (
             <span
               className={`badge ${val ? 'badge-success' : 'badge-warning'}`}

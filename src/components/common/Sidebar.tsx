@@ -9,6 +9,7 @@ import type { FixMyRideUser, NavItem } from '../../types/index';
 
 const Sidebar = ({ isOpen, onToggle, user, adminRole }: { isOpen: boolean, onToggle: (open: boolean) => void, user: FixMyRideUser | null, adminRole?: string }) => {
   const location = useLocation();
+  const role = String(adminRole || '').trim().toLowerCase();
 
   const navItems: NavItem[] = [
     { name: 'Home', icon: <TrendingUp size={20} />, path: '/' },
@@ -17,7 +18,7 @@ const Sidebar = ({ isOpen, onToggle, user, adminRole }: { isOpen: boolean, onTog
     { name: 'Payments', icon: <CreditCard size={20} />, path: '/payments' },
     { name: 'Invoices', icon: <FileText size={20} />, path: '/invoices' },
     { name: 'Inventory', icon: <Package size={20} />, path: '/parts' },
-    ...(adminRole === 'super admin' ? [{ name: 'Admins', icon: <Users size={20} />, path: '/admin-users' }] : []),
+    ...(role === 'super admin' ? [{ name: 'Admins', icon: <Users size={20} />, path: '/admin-users' }] : []),
   ];
 
   return (

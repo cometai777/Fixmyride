@@ -6,6 +6,7 @@ import Header from '../common/Header';
 import SearchBar from '../common/SearchBar';
 import ModalForm from '../common/ModalForm';
 import RuleManager from './RuleManager';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const CategoriesView = ({ showToast }: any) => {
   const [data, setData] = useState<any[]>([]);
@@ -19,6 +20,8 @@ const CategoriesView = ({ showToast }: any) => {
   const [isCatAdding, setIsCatAdding] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<any>(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState<any>(null);
+  const [deleteSubcategoryId, setDeleteSubcategoryId] = useState<any>(null);
 
   const closeCategoryModal = () => {
     setSelectedCategory(null);
@@ -182,7 +185,7 @@ const CategoriesView = ({ showToast }: any) => {
                       </span>
                     </td>
                     <td>
-                      <div className="btn-remove" style={{ color: 'var(--primary)', background: 'var(--primary-glow)', padding: '6px 14px', width: 'fit-content' }}>
+                      <div className="btn-remove" style={{ color: 'var(--primary)', background: 'var(--primary-glow)', padding: '6px 14px', width: 'fit-content', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         Manage <ChevronRight size={14} />
                       </div>
                     </td>
@@ -199,16 +202,7 @@ const CategoriesView = ({ showToast }: any) => {
                         <button
                           className="btn-remove"
                           onClick={async () => {
-                            if (!confirm('Delete this category? This may also affect its subcategories.')) return;
-                            const { error } = await (supabase as any).from('service_categories').delete().eq('id', cat.id);
-                            if (error) return showToast('Error: ' + error.message, 'error');
-                            setData((prev) => prev.filter((c) => c.id !== cat.id));
-                            if (selectedCategory?.id === cat.id) {
-                              setSelectedCategory(null);
-                              setSelectedSubcategory(null);
-                              setSubcategories([]);
-                            }
-                            showToast('Category deleted!', 'success');
+                            setDeleteCategoryId(cat.id);
                           }}
                           title="Delete"
                         >
@@ -239,7 +233,6 @@ const CategoriesView = ({ showToast }: any) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={closeCategoryModal}
           >
             <motion.div
               className="modal-content"
@@ -275,11 +268,43 @@ const CategoriesView = ({ showToast }: any) => {
                         { name: 'is_active', label: 'Active', type: 'checkbox' }
                       ]}
                       onSave={async (formData: any) => {
+                        const categoryId = selectedCategory?.id;
+                        if (!categoryId) {
+                          showToast('Please select a category first.', 'error');
+                          return;
+                        }
+
+                        // Keep code exactly as user entered (trim only).
+                        const nextCode = String(formData?.code ?? '').trim();
+                        if (!nextCode) {
+                          showToast('Service Code is required', 'error');
+                          return;
+                        }
+
+                        // Prevent duplicate subcategory codes within the same category.
+                        // Duplicate codes lead to service_rules.subcategory_code unique violations (trigger creates a rule per subcategory code).
+                        const { data: existing, error: existingErr } = await (supabase as any)
+                          .from('service_subcategories')
+                          .select('id')
+                          .eq('category_id', categoryId)
+                          .eq('code', nextCode)
+                          .maybeSingle();
+                        if (existingErr) {
+                          showToast('Error validating service code: ' + existingErr.message, 'error');
+                          return;
+                        }
+                        if (existing?.id) {
+                          showToast(`Service Code "${nextCode}" already exists in this category. Please choose a different code.`, 'error');
+                          return;
+                        }
+
                         const { data: sub, error: subError } = await (supabase as any)
                           .from('service_subcategories')
                           .insert([{
                             ...formData,
-                            category_id: selectedCategory.id
+                            code: nextCode,
+                            // Always force the correct FK
+                            category_id: categoryId
                           }])
                           .select()
                           .single();
@@ -381,12 +406,7 @@ const CategoriesView = ({ showToast }: any) => {
                                     <button
                                       className="btn-remove"
                                       onClick={async () => {
-                                        if (!confirm('Delete this subcategory? Its rule will also be removed.')) return;
-                                        const { error } = await (supabase as any).from('service_subcategories').delete().eq('id', sub.id);
-                                        if (error) return showToast('Error: ' + error.message, 'error');
-                                        setSubcategories((prev) => prev.filter((s) => s.id !== sub.id));
-                                        if (selectedSubcategory?.id === sub.id) setSelectedSubcategory(null);
-                                        showToast('Subcategory deleted!', 'success');
+                                        setDeleteSubcategoryId(sub.id);
                                       }}
                                       title="Delete"
                                     >
@@ -408,6 +428,48 @@ const CategoriesView = ({ showToast }: any) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={deleteCategoryId !== null && typeof deleteCategoryId !== 'undefined'}
+        title="Delete category"
+        message="Delete this category? This may also affect its subcategories. This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        danger
+        onClose={() => setDeleteCategoryId(null)}
+        onConfirm={async () => {
+          const id = deleteCategoryId;
+          setDeleteCategoryId(null);
+          const { error } = await (supabase as any).from('service_categories').delete().eq('id', id);
+          if (error) return showToast('Error: ' + error.message, 'error');
+          setData((prev) => prev.filter((c) => c.id !== id));
+          if (selectedCategory?.id === id) {
+            setSelectedCategory(null);
+            setSelectedSubcategory(null);
+            setSubcategories([]);
+          }
+          showToast('Category deleted!', 'success');
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteSubcategoryId !== null && typeof deleteSubcategoryId !== 'undefined'}
+        title="Delete subcategory"
+        message="Delete this subcategory? Its rule will also be removed. This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        danger
+        onClose={() => setDeleteSubcategoryId(null)}
+        onConfirm={async () => {
+          const id = deleteSubcategoryId;
+          setDeleteSubcategoryId(null);
+          const { error } = await (supabase as any).from('service_subcategories').delete().eq('id', id);
+          if (error) return showToast('Error: ' + error.message, 'error');
+          setSubcategories((prev) => prev.filter((s) => s.id !== id));
+          if (selectedSubcategory?.id === id) setSelectedSubcategory(null);
+          showToast('Subcategory deleted!', 'success');
+        }}
+      />
     </motion.div>
   );
 };
