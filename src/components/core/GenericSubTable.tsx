@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Loader2, Settings, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Settings, Package, GripVertical } from 'lucide-react';
 import ModalForm from '../common/ModalForm';
 import { supabase } from '../../lib/supabase';
 
@@ -8,11 +8,16 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingRow, setEditingRow] = useState<any>(null);
+  const [dragId, setDragId] = useState<any>(null);
 
   useEffect(() => {
     async function fetchData() {
-      const { data: rows } = await (supabase as any).from(tableName).select('*').eq('rule_id', ruleId);
-      setData(rows || []);
+      const base = (supabase as any).from(tableName).select('*').eq('rule_id', ruleId);
+      const { data: rows } =
+        tableName === 'rule_actions'
+          ? await base.order('priority', { ascending: true })
+          : await base;
+      setData((rows || []).slice());
       setLoading(false);
     }
     fetchData();
@@ -32,6 +37,12 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
       }
     }
 
+    // For rule_actions, default priority to the end of the list.
+    if (!id && tableName === 'rule_actions' && typeof processedPayload.priority === 'undefined') {
+      const max = data.reduce((acc, r) => Math.max(acc, Number(r?.priority ?? 0) || 0), 0);
+      processedPayload.priority = max + 1;
+    }
+
     const { data: result, error } = id
       ? await (supabase as any).from(tableName).update(processedPayload).eq('id', id).select()
       : await (supabase as any).from(tableName).insert([processedPayload]).select();
@@ -46,6 +57,32 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
     }
     setIsAdding(false);
     setLoading(false);
+  };
+
+  const persistActionPriorities = async (rows: any[]) => {
+    // priority should be unique & sequential starting at 1 (or 0). We'll use 1-based.
+    const updates = rows.map((r, idx) => ({ id: r.id, priority: idx + 1 }));
+    // Apply optimistically first
+    setData(rows.map((r, idx) => ({ ...r, priority: idx + 1 })));
+    const results = await Promise.all(
+      updates.map((u) => (supabase as any).from(tableName).update({ priority: u.priority }).eq('id', u.id))
+    );
+    const err = results.find((r: any) => r?.error)?.error;
+    if (err) showToast('Error updating priority: ' + (err.message || String(err)), 'error');
+  };
+
+  const onDragStartRow = (row: any) => setDragId(row?.id);
+  const onDropRow = async (targetRow: any) => {
+    if (tableName !== 'rule_actions') return;
+    if (!dragId || !targetRow?.id || dragId === targetRow.id) return;
+    const fromIdx = data.findIndex((r) => r.id === dragId);
+    const toIdx = data.findIndex((r) => r.id === targetRow.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const next = data.slice();
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setDragId(null);
+    await persistActionPriorities(next);
   };
 
   const handleDelete = async (id: any) => {
@@ -104,13 +141,29 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
         <table style={{ borderCollapse: 'separate' }}>
           <thead>
             <tr>
+              {tableName === 'rule_actions' && <th style={{ width: '40px' }} />}
               {columns.map((c: any) => <th key={c.key}>{c.label}</th>)}
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {data.map((row, idx) => (
-              <tr key={row.id || `sub-row-${idx}`}>
+              <tr
+                key={row.id || `sub-row-${idx}`}
+                draggable={tableName === 'rule_actions'}
+                onDragStart={() => onDragStartRow(row)}
+                onDragOver={(e) => {
+                  if (tableName !== 'rule_actions') return;
+                  e.preventDefault();
+                }}
+                onDrop={() => void onDropRow(row)}
+                style={tableName === 'rule_actions' ? { cursor: 'grab' } : undefined}
+              >
+                {tableName === 'rule_actions' && (
+                  <td style={{ padding: '12px 6px', width: '40px', color: 'var(--text-muted)' }}>
+                    <GripVertical size={16} />
+                  </td>
+                )}
                 {columns.map((c: any) => (
                   <td key={c.key} style={{ fontWeight: '500', fontSize: '12px', lineHeight: '1.4', padding: '12px 10px', color: 'var(--text)' }}>
                     <div style={{ wordBreak: 'break-all', opacity: 0.9 }}>
@@ -124,7 +177,13 @@ const GenericSubTable = ({ ruleId, tableName, columns, fields, showToast }: any)
                 </td>
               </tr>
             ))}
-            {data.length === 0 && <tr><td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No logic defined yet. Click "Add" to start.</td></tr>}
+            {data.length === 0 && (
+              <tr>
+                <td colSpan={columns.length + 1 + (tableName === 'rule_actions' ? 1 : 0)} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No logic defined yet. Click "Add" to start.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

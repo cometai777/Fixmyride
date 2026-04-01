@@ -66,7 +66,7 @@ const RuleManager = ({ subcategory, onBack, showToast }: any) => {
         </div>
 
         <div style={{ display: 'flex', gap: '4px' }}>
-          {['Overview', 'Conditions', 'Actions'].map(tab => (
+          {['Overview', 'Actions'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -105,140 +105,49 @@ const RuleManager = ({ subcategory, onBack, showToast }: any) => {
             </div>
           )}
           {activeTab === 'Overview' && rule && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <h4 style={{ color: 'var(--primary)', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Basic Info</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Rule Title</label>
-                  <input type="text" value={rule.title || ''} onChange={(e) => handleUpdate('title', e.target.value)} className="search-bar" style={{ width: '100%', marginBottom: 0 }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Description</label>
-                  <textarea value={rule.description || ''} onChange={(e) => handleUpdate('description', e.target.value)} className="search-bar" style={{ width: '100%', height: '80px', borderRadius: '12px' }} />
-                </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Category Code</label>
-                    <input type="text" value={rule.category_code || ''} onChange={(e) => handleUpdate('category_code', e.target.value)} className="search-bar" style={{ width: '100%' }} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Subcategory Code</label>
-                    <input type="text" value={rule.subcategory_code || ''} onChange={(e) => handleUpdate('subcategory_code', e.target.value)} className="search-bar" style={{ width: '100%' }} />
-                  </div>
-                </div>
-                
-                <h4 style={{ color: 'var(--primary)', borderBottom: '1px solid #eee', paddingBottom: '8px', marginTop: '16px' }}>Execution Flow</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc', padding: '16px', borderRadius: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" checked={rule.is_active} onChange={(e) => handleUpdate('is_active', e.target.checked)} />
-                    <label style={{ fontWeight: '600' }}>Active Rule Status</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" checked={rule.allowed} onChange={(e) => handleUpdate('allowed', e.target.checked)} />
-                    <label style={{ fontWeight: '600' }}>Service Allowed by Default</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" checked={rule.service_area_required} onChange={(e) => handleUpdate('service_area_required', e.target.checked)} />
-                    <label style={{ fontWeight: '600' }}>Geo-Fencing Required</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" checked={rule.ask_followup_question} onChange={(e) => handleUpdate('ask_followup_question', e.target.checked)} />
-                    <label style={{ fontWeight: '600' }}>Show Follow-up Question</label>
-                  </div>
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Category Code</label>
+                <input
+                  type="text"
+                  value={rule.category_code || ''}
+                  onChange={(e) => handleUpdate('category_code', e.target.value)}
+                  className="search-bar"
+                  style={{ width: '100%', marginBottom: 0 }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Subcategory Code</label>
+                <input
+                  type="text"
+                  value={rule.subcategory_code || ''}
+                  onChange={(e) => handleUpdate('subcategory_code', e.target.value)}
+                  className="search-bar"
+                  style={{ width: '100%', marginBottom: 0 }}
+                />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <h4 style={{ color: 'var(--primary)', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>Messaging & Logic</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Target City</label>
-                  <input type="text" value={rule.allowed_city || ''} onChange={(e) => handleUpdate('allowed_city', e.target.value)} className="search-bar" style={{ width: '100%', marginBottom: 0 }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Acceptance Message</label>
-                  <input type="text" value={rule.acceptance_message || ''} onChange={(e) => handleUpdate('acceptance_message', e.target.value)} className="search-bar" style={{ width: '100%' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Rejection Message</label>
-                  <input type="text" value={rule.rejection_message || ''} onChange={(e) => handleUpdate('rejection_message', e.target.value)} className="search-bar" style={{ width: '100%' }} />
-                </div>
-                
-                <h4 style={{ color: 'var(--primary)', borderBottom: '1px solid #eee', paddingBottom: '8px', marginTop: '16px' }}>Dynamic Requirements</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={rule.require_vehicle_make} onChange={(e) => handleUpdate('require_vehicle_make', e.target.checked)} />
-                    <label style={{ fontSize: '12px' }}>Req. Make</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={rule.require_vehicle_model} onChange={(e) => handleUpdate('require_vehicle_model', e.target.checked)} />
-                    <label style={{ fontSize: '12px' }}>Req. Model</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={rule.require_vehicle_year} onChange={(e) => handleUpdate('require_vehicle_year', e.target.checked)} />
-                    <label style={{ fontSize: '12px' }}>Req. Year</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={rule.require_part_check} onChange={(e) => handleUpdate('require_part_check', e.target.checked)} />
-                    <label style={{ fontSize: '12px' }}>Check Parts</label>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={rule.require_pricing_check} onChange={(e) => handleUpdate('require_pricing_check', e.target.checked)} />
-                    <label style={{ fontSize: '12px' }}>Check Price</label>
-                  </div>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Title</label>
+                <input
+                  type="text"
+                  value={rule.title || ''}
+                  onChange={(e) => handleUpdate('title', e.target.value)}
+                  className="search-bar"
+                  style={{ width: '100%', marginBottom: 0 }}
+                />
+              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Logic Priority (Lower is first)</label>
-                  <input type="number" value={rule.priority || 1} onChange={(e) => handleUpdate('priority', Number(e.target.value))} className="search-bar" style={{ width: '100%' }} />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Custom Form URL (offer_fieldd_url)</label>
-                  <input type="text" value={rule.offer_fieldd_url || ''} onChange={(e) => handleUpdate('offer_fieldd_url', e.target.value)} className="search-bar" style={{ width: '100%' }} />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Description</label>
+                <textarea
+                  value={rule.description || ''}
+                  onChange={(e) => handleUpdate('description', e.target.value)}
+                  className="search-bar"
+                  style={{ width: '100%', height: '110px', borderRadius: '12px' }}
+                />
               </div>
             </div>
-          )}
-          {activeTab === 'Conditions' && rule && (
-            <GenericSubTable
-              ruleId={rule.id}
-              tableName="rule_conditions"
-              showToast={showToast}
-              columns={[
-                {
-                  key: 'field_name', label: 'Type', formatter: (val: any, row: any) => {
-                    const type = val || row?.condition_payload?.type || row?.type;
-                    return type ? type.replace(/_/g, ' ').replace(/\b\w/g, (l: any) => l.toUpperCase()) : 'N/A';
-                  }
-                },
-                { key: 'operator', label: 'Operator', formatter: (val: any) => val ? val.replace(/_/g, ' ').toUpperCase() : 'EQ' },
-                {
-                  key: 'value', label: 'Parameters', formatter: (val: any, row: any) => {
-                    let realVal = val || row?.condition_payload || row?.payload;
-                    if (!realVal) return 'No Parameters';
-
-                    // Aggressively attempt to parse string if it looks like JSON
-                    if (typeof realVal === 'string' && (realVal.startsWith('{') || realVal.startsWith('['))) {
-                      try { realVal = JSON.parse(realVal); } catch (e) { /* fallback to raw string */ }
-                    }
-
-                    if (typeof realVal === 'object' && realVal !== null) {
-                      return Object.entries(realVal).map(([k, v]) => {
-                        const cleanK = k?.replace(/_/g, ' ').replace(/\b\w/g, (l: any) => l.toUpperCase());
-                        const displayV = typeof v === 'object' ? JSON.stringify(v)?.replace(/["{}]/g, '')?.replace(/[:]/g, ': ') : v;
-                        return `${cleanK}: ${displayV}`;
-                      }).join(', ');
-                    }
-                    return String(realVal);
-                  }
-                }
-              ]}
-              fields={[
-                { name: 'field_name', label: 'Condition Type', type: 'select', options: ['distance_range', 'vehicle_age', 'brand_match', 'city_match', 'always_true'] },
-                { name: 'operator', label: 'Operator (Logic)', type: 'select', options: ['between', 'in', 'eq', 'gt', 'lt', 'always'] },
-                { name: 'value', label: 'Configure Parameters', type: 'dynamic_payload' }
-              ]}
-            />
           )}
           {activeTab === 'Actions' && rule && (
             <GenericSubTable
